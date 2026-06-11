@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Genzy — Tableau de bord</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+--black:#0E0E0E;--white:#F5F4F0;--accent:#D4563A;--mid:#B8B5AE;--light:#ECEAE4;
+--border:rgba(0,0,0,0.1);--text:#0E0E0E;--text2:#5F5E5A;--text3:#888780;
+--surface:#ffffff;--surface2:#F5F4F0;
+--ok:#1D9E75;--warn:#BA7517;--info:#185FA5;--danger:#993C1D;
+--sw:240px;--r:10px;
+}
+body{font-family:'DM Sans',sans-serif;background:var(--light);color:var(--text);min-height:100vh;display:flex}
+.sidebar{width:var(--sw);min-height:100vh;background:var(--black);display:flex;flex-direction:column;padding:24px 0;position:fixed;top:0;left:0;z-index:100}
+.logo-area{padding:0 20px 24px;border-bottom:1px solid rgba(255,255,255,0.07);display:flex;align-items:center;gap:10px}
+.logo-mark{width:38px;height:38px;background:var(--white);border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.logo-name{font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;color:var(--white);letter-spacing:-0.5px}
+.logo-sub{font-size:10px;color:#5F5E5A;letter-spacing:0.05em}
+.nav{padding:20px 12px;flex:1;display:flex;flex-direction:column;gap:2px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:7px;font-size:13px;color:#888780;cursor:pointer;transition:all 0.15s;border:none;background:none;width:100%;text-align:left}
+.nav-item:hover{background:rgba(255,255,255,0.05);color:var(--white)}
+.nav-item.active{background:rgba(255,255,255,0.09);color:var(--white)}
+.nav-dot{width:6px;height:6px;border-radius:50%;background:transparent;flex-shrink:0;transition:background .15s}
+.nav-item.active .nav-dot{background:var(--accent)}
+.sidebar-footer{padding:16px 20px;border-top:1px solid rgba(255,255,255,0.07);font-size:11px;color:#444441}
+.acc-bar{height:3px;background:var(--accent);border-radius:2px;margin-bottom:4px;width:28px}
+.main{margin-left:var(--sw);flex:1;padding:32px 36px;min-height:100vh}
+.page{display:none}.page.active{display:block}
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:12px}
+.page-title{font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;letter-spacing:-0.5px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px 20px}
+.section-label{font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.1em;color:var(--text3);margin:22px 0 10px}
+.card-title{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:600;margin-bottom:14px}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:22px}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px}
+.kpi-label{font-size:10px;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em}
+.kpi-val{font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:700;letter-spacing:-0.5px}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.task-row{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--light);font-size:13px;cursor:pointer}
+.task-row:last-child{border-bottom:none}
+.task-row:hover{opacity:.8}
+.cb{width:18px;height:18px;border-radius:5px;border:1.5px solid var(--mid);flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;transition:all .15s;background:var(--surface)}
+.cb.done{background:var(--ok);border-color:var(--ok)}
+.cb.done::after{content:'✓';color:#fff;font-size:11px;font-weight:700}
+.task-text{flex:1;line-height:1.45}
+.task-text.done{text-decoration:line-through;color:var(--text3)}
+.add-row{display:flex;gap:8px;margin-top:12px}
+.add-input{flex:1;font-family:'DM Sans',sans-serif;font-size:13px;padding:8px 11px;border:1px solid var(--border);border-radius:7px;background:var(--surface2);color:var(--text);outline:none}
+.add-input:focus{border-color:var(--accent)}
+.add-btn{background:var(--accent);color:#fff;border:none;border-radius:7px;padding:8px 14px;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap}
+.add-btn:hover{opacity:.85}
+.prog-wrap{background:var(--light);border-radius:20px;height:7px;overflow:hidden}
+.prog-fill{height:100%;border-radius:20px;background:var(--accent);transition:width .4s}
+.client-row{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--light);font-size:13px}
+.client-row:last-child{border-bottom:none}
+.avatar{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:700;flex-shrink:0}
+.client-info{flex:1;min-width:0}
+.client-name{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.client-meta{font-size:11px;color:var(--text3);margin-top:1px}
+.pill{font-size:10px;font-weight:500;padding:3px 9px;border-radius:20px;white-space:nowrap}
+.p-signed{background:#E1F5EE;color:#085041}.p-sent{background:#E6F1FB;color:#0C447C}
+.p-talk{background:#FAEEDA;color:#633806}.p-prospect{background:var(--light);color:var(--text3)}
+.p-lost{background:#FCEBEB;color:#791F1F}.p-progress{background:#EEEDFE;color:#3C3489}
+.action-btn{background:none;border:none;cursor:pointer;font-size:18px;color:var(--text3);padding:0 4px;opacity:.45;line-height:1;flex-shrink:0}
+.action-btn:hover{opacity:.8}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border-radius:14px;padding:28px;width:560px;max-width:95vw;max-height:90vh;overflow-y:auto}
+.modal-title{font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:700;margin-bottom:22px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-field{display:flex;flex-direction:column;gap:5px}
+.form-field.full{grid-column:1/-1}
+.form-label{font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.06em}
+.form-input,.form-select,.form-textarea{font-family:'DM Sans',sans-serif;font-size:13px;padding:9px 11px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);outline:none;width:100%}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--accent)}
+.form-textarea{resize:vertical;min-height:70px}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:22px}
+.btn-primary{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:9px 20px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer}
+.btn-primary:hover{opacity:.85}
+.btn-secondary{background:none;color:var(--text2);border:1px solid var(--border);border-radius:8px;padding:9px 20px;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer}
+.btn-secondary:hover{background:var(--light)}
+.btn-icon{display:flex;align-items:center;gap:6px;background:none;border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-family:'DM Sans',sans-serif;font-size:12px;color:var(--text2);cursor:pointer}
+.btn-icon:hover{background:var(--light)}
+.note-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px 20px;margin-bottom:12px}
+.note-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.note-title{font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600}
+.notes-area{width:100%;font-family:'DM Sans',sans-serif;font-size:13px;line-height:1.65;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);resize:vertical;outline:none;min-height:80px}
+.notes-area:focus{border-color:var(--accent)}
+.detail-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:20px;margin-top:16px;display:none}
+.detail-panel.open{display:block}
+.detail-row{display:flex;gap:8px;padding:7px 0;border-bottom:1px solid var(--light);font-size:13px}
+.detail-row:last-child{border-bottom:none}
+.detail-label{color:var(--text3);min-width:130px;flex-shrink:0}
+
+/* CLIENT TASKS SECTION */
+.client-task-block{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);margin-bottom:12px;overflow:hidden}
+.client-task-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;cursor:pointer;border-bottom:1px solid var(--light)}
+.client-task-header:hover{background:var(--surface2)}
+.client-task-header-left{display:flex;align-items:center;gap:10px}
+.client-task-body{padding:12px 18px 6px}
+.caret{font-size:10px;color:var(--text3);transition:transform .2s}
+.caret.open{transform:rotate(90deg)}
+.task-phase-badge{font-size:10px;padding:2px 8px;border-radius:10px;font-weight:500}
+.export-bar{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 16px;margin-bottom:20px}
+.export-bar span{font-size:12px;color:var(--text3);flex:1}
+
+/* AGENCY TASKS */
+.agency-section{background:rgba(212,86,58,0.04);border:1px solid rgba(212,86,58,0.15);border-radius:var(--r);padding:16px 18px;margin-bottom:14px}
+.agency-section-title{font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between}
+
+@media(max-width:860px){
+.sidebar{width:60px}
+.logo-name,.logo-sub,.nav-item span,.sidebar-footer{display:none}
+.main{margin-left:60px;padding:20px 14px}
+.two-col{grid-template-columns:1fr}
+.form-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<aside class="sidebar">
+<div class="logo-area">
+<div class="logo-mark">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+<rect x="0" y="0" width="11" height="11" rx="2" fill="#0E0E0E"/>
+<rect x="13" y="0" width="11" height="5" rx="1.5" fill="#D4563A"/>
+<rect x="13" y="6" width="11" height="5" rx="1.5" fill="#0E0E0E"/>
+<rect x="0" y="13" width="24" height="11" rx="2" fill="#0E0E0E"/>
+</svg>
+</div>
+<div><div class="logo-name">Genzy</div><div class="logo-sub">Dashboard</div></div>
+</div>
+<nav class="nav">
+<button class="nav-item active" onclick="nav('accueil',this)"><div class="nav-dot"></div><span>Vue d'ensemble</span></button>
+<button class="nav-item" onclick="nav('agence',this)"><div class="nav-dot"></div><span>Tâches agence</span></button>
+<button class="nav-item" onclick="nav('taches',this)"><div class="nav-dot"></div><span>Tâches clients</span></button>
+<button class="nav-item" onclick="nav('pipeline',this)"><div class="nav-dot"></div><span>Pipeline clients</span></button>
+<button class="nav-item" onclick="nav('notes',this)"><div class="nav-dot"></div><span>Notes & réunions</span></button>
+</nav>
+<div class="sidebar-footer"><div class="acc-bar"></div>Bénin · Genzy 2025</div>
+</aside>
+
+<main class="main">
+<!-- ACCUEIL -->
+<div id="page-accueil" class="page active">
+<div class="page-header">
+<div>
+<div class="page-title">Vue d'ensemble</div>
+<div style="font-size:13px;color:var(--text3);margin-top:3px" id="date-lbl"></div>
+</div>
+<div style="display:flex;gap:8px;align-items:center">
+<select style="font-family:'DM Sans',sans-serif;font-size:13px;padding:7px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer" id="month-sel" onchange="S.month=+this.value;save();renderKPIs()">
+<option value="0">Janvier</option><option value="1">Février</option><option value="2">Mars</option>
+<option value="3">Avril</option><option value="4">Mai</option><option value="5">Juin</option>
+<option value="6">Juillet</option><option value="7">Août</option><option value="8">Septembre</option>
+<option value="9">Octobre</option><option value="10">Novembre</option><option value="11">Décembre</option>
+</select>
+<button class="btn-icon" onclick="exportData()">↑ Export</button>
+<button class="btn-icon" onclick="importData()">↓ Import</button>
+</div>
+</div>
+<div class="kpi-grid" id="kpi-grid"></div>
+<div class="two-col">
+<div>
+<div class="section-label">Revenus mensuels (FCFA)</div>
+<div class="card">
+<div style="display:flex;gap:14px;margin-bottom:10px;font-size:11px;color:var(--text3)">
+<span><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:#D4563A;margin-right:4px"></span>Réalisé</span>
+<span><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:#ECEAE4;border:1px solid #B8B5AE;margin-right:4px"></span>Objectif</span>
+</div>
+<div style="position:relative;height:190px"><canvas id="c-rev"></canvas></div>
+</div>
+</div>
+<div>
+<div class="section-label">Statut pipeline</div>
+<div class="card">
+<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;font-size:11px;color:var(--text3)" id="donut-legend"></div>
+<div style="position:relative;height:190px"><canvas id="c-donut"></canvas></div>
+</div>
+</div>
+</div>
+<div class="section-label">Progression globale</div>
+<div class="card">
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px" id="prog-blocks"></div>
+</div>
+</div>
+
+<!-- TÂCHES AGENCE -->
+<div id="page-agence" class="page">
+<div class="page-header">
+<div>
+<div class="page-title">Tâches agence</div>
+<div style="font-size:13px;color:var(--text3);margin-top:3px" id="agence-summary"></div>
+</div>
+<div style="display:flex;gap:8px">
+<button class="btn-icon" onclick="exportData()">↑ Export</button>
+<button class="btn-icon" onclick="importData()">↓ Import</button>
+</div>
+</div>
+
+<div class="agency-section">
+<div class="agency-section-title">Cette semaine</div>
+<div id="tl-week"></div>
+<div class="add-row"><input class="add-input" id="in-week" placeholder="Nouvelle tâche..." onkeydown="if(event.key==='Enter')addTask('week',this)"><button class="add-btn" onclick="addTask('week',document.getElementById('in-week'))">+</button></div>
+</div>
+
+<div class="agency-section">
+<div class="agency-section-title">Administratif & légal</div>
+<div id="tl-admin"></div>
+<div class="add-row"><input class="add-input" id="in-admin" placeholder="Nouvelle tâche..." onkeydown="if(event.key==='Enter')addTask('admin',this)"><button class="add-btn" onclick="addTask('admin',document.getElementById('in-admin'))">+</button></div>
+</div>
+
+<div class="agency-section">
+<div class="agency-section-title" style="flex-direction:column;align-items:flex-start;gap:4px">
+Identité visuelle Genzy
+<span style="font-size:10px;color:var(--text3);font-weight:400;text-transform:none;letter-spacing:0">Construction de l'identité de l'agence</span>
+</div>
+<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+<button class="pill" style="cursor:pointer;border:1px solid var(--accent);color:var(--accent);background:transparent;padding:4px 10px;font-size:11px" onclick="setIdPhase(1)">Phase 1 — Logo</button>
+<button class="pill" style="cursor:pointer;border:1px solid var(--border);color:var(--text3);background:transparent;padding:4px 10px;font-size:11px" onclick="setIdPhase(2)">Phase 2 — Charte</button>
+<button class="pill" style="cursor:pointer;border:1px solid var(--border);color:var(--text3);background:transparent;padding:4px 10px;font-size:11px" onclick="setIdPhase(3)">Phase 3 — Supports</button>
+</div>
+<div id="id-phase-container"></div>
+</div>
+
+<div class="agency-section">
+<div class="agency-section-title">Communication & acquisition</div>
+<div id="tl-comm"></div>
+<div class="add-row"><input class="add-input" id="in-comm" placeholder="Nouvelle tâche..." onkeydown="if(event.key==='Enter')addTask('comm',this)"><button class="add-btn" onclick="addTask('comm',document.getElementById('in-comm'))">+</button></div>
+</div>
+</div>
+
+<!-- TÂCHES CLIENTS -->
+<div id="page-taches" class="page">
+<div class="page-header">
+<div>
+<div class="page-title">Tâches clients</div>
+<div style="font-size:13px;color:var(--text3);margin-top:3px" id="client-tasks-summary"></div>
+</div>
+<div style="display:flex;gap:8px">
+<button class="btn-icon" onclick="exportData()">↑ Export</button>
+<button class="btn-icon" onclick="importData()">↓ Import</button>
+</div>
+</div>
+<div id="client-tasks-list"></div>
+</div>
+
+<!-- PIPELINE -->
+<div id="page-pipeline" class="page">
+<div class="page-header">
+<div class="page-title">Pipeline clients</div>
+<div style="display:flex;gap:8px">
+<button class="btn-primary" onclick="openModal()">+ Nouveau client</button>
+<button class="btn-icon" onclick="exportData()">↑ Export</button>
+<button class="btn-icon" onclick="importData()">↓ Import</button>
+</div>
+</div>
+<div class="kpi-grid" id="pipe-kpis"></div>
+<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+<button class="pill p-prospect" style="cursor:pointer;border:none;padding:5px 12px;font-size:12px" onclick="filterPipe('')">Tous</button>
+<button class="pill p-prospect" style="cursor:pointer;border:none;padding:5px 12px;font-size:12px" onclick="filterPipe('prospect')">Prospect</button>
+<button class="pill p-talk" style="cursor:pointer;border:none;padding:5px 12px;font-size:12px" onclick="filterPipe('talk')">En discussion</button>
+<button class="pill p-sent" style="cursor:pointer;border:none;padding:5px 12px;font-size:12px" onclick="filterPipe('sent')">Devis envoyé</button>
+<button class="pill p-signed" style="cursor:pointer;border:none;padding:5px 12px;font-size:12px" onclick="filterPipe('signed')">Signé</button>
+<button class="pill p-progress" style="cursor:pointer;border:none;padding:5px 12px;font-size:12px" onclick="filterPipe('progress')">En cours</button>
+<button class="pill p-lost" style="cursor:pointer;border:none;padding:5px 12px;font-size:12px" onclick="filterPipe('lost')">Perdu</button>
+</div>
+<div class="card" id="pipe-list"></div>
+<div class="detail-panel" id="detail-panel">
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+<div style="font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:600" id="detail-name"></div>
+<div style="display:flex;gap:8px">
+<button class="btn-primary" style="padding:6px 14px;font-size:12px" onclick="editClient()">Modifier</button>
+<button class="btn-secondary" style="padding:6px 14px;font-size:12px" onclick="closeDetail()">Fermer</button>
+</div>
+</div>
+<div id="detail-body"></div>
+</div>
+</div>
+
+<!-- NOTES -->
+<div id="page-notes" class="page">
+<div class="page-header">
+<div class="page-title">Notes & réunions</div>
+<div style="display:flex;gap:8px">
+<button class="btn-primary" onclick="addNote()">+ Nouvelle note</button>
+<button class="btn-icon" onclick="exportData()">↑ Export</button>
+<button class="btn-icon" onclick="importData()">↓ Import</button>
+</div>
+</div>
+<div id="notes-list"></div>
+</div>
+</main>
+
+<!-- MODAL CLIENT -->
+<div class="modal-bg" id="modal-bg" onclick="if(event.target===this)closeModal()">
+<div class="modal">
+<div class="modal-title" id="modal-title">Nouveau client</div>
+<div class="form-grid">
+<div class="form-field full"><label class="form-label">Nom de l'entreprise *</label><input class="form-input" id="f-name" placeholder="Ex: Boutique Wax & Cie"></div>
+<div class="form-field"><label class="form-label">Contact (nom)</label><input class="form-input" id="f-contact" placeholder="Ex: Koffi Adjovi"></div>
+<div class="form-field"><label class="form-label">Téléphone</label><input class="form-input" id="f-phone" placeholder="+229 97 00 00 00" type="tel"></div>
+<div class="form-field"><label class="form-label">Email</label><input class="form-input" id="f-email" placeholder="contact@exemple.com" type="email"></div>
+<div class="form-field"><label class="form-label">Secteur d'activité</label>
+<select class="form-select" id="f-sector">
+<option value="">— Choisir —</option><option>Mode & textile</option><option>Restauration</option>
+<option>Commerce de détail</option><option>Tech & digital</option><option>Éducation</option>
+<option>Santé & beauté</option><option>BTP & immobilier</option><option>Agriculture</option>
+<option>ONG / Associatif</option><option>Institution / Gouvernement</option><option>Autre</option>
+</select>
+</div>
+<div class="form-field"><label class="form-label">Ville</label><input class="form-input" id="f-city" placeholder="Ex: Cotonou, Porto-Novo…"></div>
+<div class="form-field"><label class="form-label">Canal d'acquisition</label>
+<select class="form-select" id="f-channel">
+<option value="">— Choisir —</option><option>Bouche-à-oreille</option><option>Instagram</option>
+<option>LinkedIn</option><option>Facebook</option><option>WhatsApp</option>
+<option>Recommandation client</option><option>Prospection directe</option>
+<option>Événement / Salon</option><option>Site web</option><option>Autre</option>
+</select>
+</div>
+<div class="form-field"><label class="form-label">Statut</label>
+<select class="form-select" id="f-status">
+<option value="prospect">Prospect</option><option value="talk">En discussion</option>
+<option value="sent">Devis envoyé</option><option value="signed">Contrat signé</option>
+<option value="progress">Projet en cours</option><option value="lost">Perdu</option>
+</select>
+</div>
+<div class="form-field"><label class="form-label">Service demandé</label>
+<select class="form-select" id="f-service">
+<option value="">— Choisir —</option><option>Identité visuelle complète</option><option>Logo seul</option>
+<option>Charte graphique</option><option>Pack réseaux sociaux</option><option>Site web</option>
+<option>Stratégie de marque</option><option>Packaging</option><option>Campagne publicitaire</option><option>Autre</option>
+</select>
+</div>
+<div class="form-field"><label class="form-label">Montant devis (FCFA)</label><input class="form-input" id="f-amount" placeholder="Ex: 250000" type="number"></div>
+<div class="form-field"><label class="form-label">Date de premier contact</label><input class="form-input" id="f-date" type="date"></div>
+<div class="form-field"><label class="form-label">Priorité</label>
+<select class="form-select" id="f-priority"><option value="normal">Normale</option><option value="high">Haute</option><option value="low">Faible</option></select>
+</div>
+<div class="form-field full"><label class="form-label">Besoins / Notes</label><textarea class="form-textarea" id="f-notes" placeholder="Résumé du brief…"></textarea></div>
+<div class="form-field full"><label class="form-label">Prochaine action</label><input class="form-input" id="f-next" placeholder="Ex: Envoyer devis d'ici vendredi"></div>
+</div>
+<div class="modal-actions">
+<button class="btn-secondary" onclick="closeModal()">Annuler</button>
+<button class="btn-primary" onclick="saveClient()">Enregistrer</button>
+</div>
+</div>
+</div>
+
+<!-- MODAL TÂCHE CLIENT -->
+<div class="modal-bg" id="modal-ctask-bg" onclick="if(event.target===this)closeCtaskModal()">
+<div class="modal" style="width:460px">
+<div class="modal-title">Ajouter une tâche</div>
+<div class="form-grid">
+<div class="form-field full"><label class="form-label">Tâche *</label><input class="form-input" id="ct-text" placeholder="Ex: Livrer les maquettes logo"></div>
+<div class="form-field"><label class="form-label">Phase / Catégorie</label>
+<select class="form-select" id="ct-phase">
+<option value="brief">Brief & validation</option><option value="creation">Création</option>
+<option value="revision">Révisions</option><option value="livraison">Livraison</option>
+<option value="suivi">Suivi post-projet</option><option value="autre">Autre</option>
+</select>
+</div>
+<div class="form-field"><label class="form-label">Deadline</label><input class="form-input" id="ct-deadline" type="date"></div>
+</div>
+<div class="modal-actions">
+<button class="btn-secondary" onclick="closeCtaskModal()">Annuler</button>
+<button class="btn-primary" onclick="saveCtask()">Ajouter</button>
+</div>
+</div>
+</div>
+
+<input type="file" id="import-file" accept=".json" style="display:none" onchange="doImport(this)">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const KEY='genzy_v4';
+const MONTHS=['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+const DAYS=['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+
+const PHASE_LABELS={brief:'Brief & validation',creation:'Création',revision:'Révisions',livraison:'Livraison',suivi:'Suivi',autre:'Autre'};
+const PHASE_COLORS={brief:'#E6F1FB',creation:'#EEEDFE',revision:'#FAEEDA',livraison:'#E1F5EE',suivi:'#F5F4F0',autre:'#F5F4F0'};
+const PHASE_TEXT={brief:'#0C447C',creation:'#3C3489',revision:'#633806',livraison:'#085041',suivi:'#5F5E5A',autre:'#5F5E5A'};
+
+function defAgencyTasks(){return{
+week:[
+{id:1,text:'Envoyer facture client (solde 50%)',done:false},
+{id:2,text:'Relancer prospect en attente de devis',done:false},
+{id:3,text:'Check-in hebdo avec le manager',done:false},
+{id:4,text:'Préparer brief pour nouveau prospect',done:false},
+],
+admin:[
+{id:10,text:'Déclaration RCCM au GUFE (Cotonou)',done:false},
+{id:11,text:'Obtenir l\'IFU à la DGI Bénin',done:false},
+{id:12,text:'Ouvrir un compte bancaire professionnel',done:false},
+{id:13,text:'Créer un compte MTN MoMo Business',done:false},
+{id:14,text:'Rédiger modèle de contrat client',done:false},
+{id:15,text:'Installer Wave Accounting (facturation)',done:false},
+],
+id1:[
+{id:20,text:'Rédiger le brief créatif & mood board',done:false},
+{id:21,text:'Créer le logo principal (version noire)',done:false},
+{id:22,text:'Créer le logo version inversée (blanc)',done:false},
+{id:23,text:'Décliner le symbole seul (3 variantes)',done:false},
+{id:24,text:'Créer le favicon et l\'icône app',done:false},
+],
+id2:[
+{id:30,text:'Fixer la palette de couleurs officielle',done:false},
+{id:31,text:'Sélectionner les typographies',done:false},
+{id:32,text:'Définir l\'échelle typographique',done:false},
+{id:33,text:'Rédiger les règles d\'usage (do & don\'ts)',done:false},
+{id:34,text:'Produire la charte graphique en PDF',done:false},
+],
+id3:[
+{id:40,text:'Concevoir la carte de visite',done:false},
+{id:41,text:'Créer l\'en-tête devis & facture',done:false},
+{id:42,text:'Templates posts Instagram (3 formats)',done:false},
+{id:43,text:'Configurer Instagram & LinkedIn',done:false},
+{id:44,text:'Créer la signature email',done:false},
+{id:45,text:'Préparer le deck de présentation agence',done:false},
+{id:46,text:'Lancer le site vitrine',done:false},
+],
+comm:[
+{id:50,text:'Définir les 2 niches cibles prioritaires',done:false},
+{id:51,text:'Rédiger le pitch de l\'agence (2 versions)',done:false},
+{id:52,text:'Créer un calendrier éditorial mensuel',done:false},
+{id:53,text:'Contacter 5 prospects de la niche cible',done:false},
+{id:54,text:'Demander des témoignages aux 1ers clients',done:false},
+]
+};}
+
+function defClientTasks(clients){
+const ct={};
+clients.forEach(c=>{ct[c.id]=[];});
+if(clients[0])ct[clients[0].id]=[
+{id:200,text:'Envoyer devis final',done:true,phase:'brief',deadline:'2025-03-15'},
+{id:201,text:'Valider brief & mood board',done:false,phase:'brief',deadline:''},
+{id:202,text:'Créer les maquettes logo',done:false,phase:'creation',deadline:'2025-03-28'},
+];
+if(clients[1])ct[clients[1].id]=[
+{id:210,text:'Livrer les templates Instagram',done:false,phase:'livraison',deadline:'2025-04-10'},
+{id:211,text:'Formation à l\'utilisation des templates',done:false,phase:'suivi',deadline:''},
+];
+return ct;
+}
+
+const CLIENT_DEFAULTS=[
+{id:1,name:'Boutique Wax & Cie',contact:'Afi Mensah',phone:'+229 97 11 22 33',email:'afi@waxcie.bj',sector:'Mode & textile',city:'Cotonou',channel:'Instagram',status:'sent',service:'Identité visuelle complète',amount:150000,date:'2025-03-10',priority:'high',notes:'Veut un rebranding complet.',next:'Relancer lundi'},
+{id:2,name:'Restaurant Le Wologuèdè',contact:'Kofi Agbessi',phone:'+229 96 55 44 33',email:'kofi@wologuede.bj',sector:'Restauration',city:'Cotonou',channel:'Bouche-à-oreille',status:'signed',service:'Pack réseaux sociaux',amount:280000,date:'2025-02-20',priority:'normal',notes:'Client satisfait, potentiel retainer.',next:'Livrer les templates'},
+{id:3,name:'Startup FinTech Abomey',contact:'Sèna Dossou',phone:'+229 95 88 77 66',email:'sena@fintechabomey.com',sector:'Tech & digital',city:'Abomey',channel:'LinkedIn',status:'talk',service:'Identité visuelle complète',amount:400000,date:'2025-04-01',priority:'high',notes:'Pitch deck en cours.',next:'Envoyer devis détaillé'},
+{id:4,name:'École privée Parakou',contact:'Directrice Amoussou',phone:'+229 23 10 45 67',email:'',sector:'Éducation',city:'Parakou',channel:'Recommandation client',status:'prospect',service:'Logo seul',amount:120000,date:'2025-04-05',priority:'low',notes:'Premier contact par téléphone.',next:'Planifier réunion'},
+];
+
+function def(){
+const clients=JSON.parse(JSON.stringify(CLIENT_DEFAULTS));
+return{
+month:new Date().getMonth(),
+agencyTasks:defAgencyTasks(),
+clientTasks:defClientTasks(clients),
+clients,
+notes:[{id:1,date:'2025-04-07',title:'Check-in semaine 14',content:'Bonne semaine. Le restaurant a signé.'}],
+rev:{r:[0,120000,195000,280000,0,0,0,0,0,0,0,0],o:[200000,200000,250000,300000,300000,350000,350000,400000,400000,450000,450000,500000]},
+nid:300,pipeFilter:'',openClientId:null,idPhase:1,openCtaskClientId:null,clientTasksOpen:{}
+};
+}
+
+let S;
+try{S=JSON.parse(localStorage.getItem(KEY));if(!S||!S.agencyTasks)S=def();}catch(e){S=def();}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+
+// EXPORT / IMPORT
+function exportData(){
+const blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
+const url=URL.createObjectURL(blob);
+const a=document.createElement('a');
+a.href=url;a.download='genzy_data_'+new Date().toISOString().slice(0,10)+'.json';
+a.click();URL.revokeObjectURL(url);
+}
+function importData(){document.getElementById('import-file').click();}
+function doImport(input){
+const file=input.files[0];if(!file)return;
+const reader=new FileReader();
+reader.onload=e=>{
+try{
+const d=JSON.parse(e.target.result);
+if(!d.clients||!d.agencyTasks){alert('Fichier invalide.');return;}
+S=d;save();
+renderPage(document.querySelector('.nav-item.active')?.onclick?.toString().match(/'(\w+)'/)?.[1]||'accueil');
+alert('✓ Données importées avec succès.');
+}catch(err){alert('Erreur lors de l\'import.');}
+};
+reader.readAsText(file);
+input.value='';
+}
+
+// NAV
+function nav(name,btn){
+document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
+document.getElementById('page-'+name).classList.add('active');
+if(btn)btn.classList.add('active');
+renderPage(name);
+}
+function renderPage(n){
+if(n==='accueil')renderAccueil();
+if(n==='agence')renderAgence();
+if(n==='taches')renderClientTasks();
+if(n==='pipeline')renderPipeline();
+if(n==='notes')renderNotes();
+}
+
+// DATE
+const now=new Date();
+document.getElementById('date-lbl').textContent=DAYS[now.getDay()]+' '+now.getDate()+' '+MONTHS[now.getMonth()]+' '+now.getFullYear();
+document.getElementById('month-sel').value=S.month;
+
+// KPIs
+const KPI_DATA=[
+{ca:'–',cl:'0',pr:'0',cv:'–'},{ca:'120 000',cl:'1',pr:'2',cv:'33%'},
+{ca:'195 000',cl:'2',pr:'3',cv:'40%'},{ca:'280 000',cl:'3',pr:'4',cv:'50%'},
+...Array(8).fill({ca:'–',cl:'–',pr:'–',cv:'–'})
+];
+function renderKPIs(){
+const d=KPI_DATA[S.month]||KPI_DATA[0];
+document.getElementById('kpi-grid').innerHTML=`
+<div class="kpi"><div class="kpi-label">CA du mois (FCFA)</div><div class="kpi-val" style="color:var(--accent)">${d.ca}</div></div>
+<div class="kpi"><div class="kpi-label">Clients actifs</div><div class="kpi-val" style="color:var(--ok)">${d.cl}</div></div>
+<div class="kpi"><div class="kpi-label">Projets en cours</div><div class="kpi-val">${d.pr}</div></div>
+<div class="kpi"><div class="kpi-label">Taux conversion</div><div class="kpi-val" style="color:var(--warn)">${d.cv}</div></div>`;
+}
+
+// CHARTS
+let cRev,cDonut;
+function initCharts(){
+const cr=document.getElementById('c-rev');const cd=document.getElementById('c-donut');
+if(!cr||!cd)return;
+if(cRev)cRev.destroy();if(cDonut)cDonut.destroy();
+cRev=new Chart(cr,{type:'bar',data:{labels:MONTHS.map(m=>m.slice(0,3)),datasets:[
+{label:'Réalisé',data:S.rev.r,backgroundColor:'#D4563A',borderRadius:4},
+{label:'Objectif',data:S.rev.o,backgroundColor:'#ECEAE4',borderRadius:4}
+]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+scales:{y:{ticks:{callback:v=>v>=1000?(v/1000)+'k':v,font:{size:11}},grid:{color:'rgba(0,0,0,0.05)'}},x:{ticks:{font:{size:10}},grid:{display:false}}}}});
+const statMap={prospect:'Prospect',talk:'En discussion',sent:'Devis envoyé',signed:'Signé',progress:'En cours',lost:'Perdu'};
+const colors={prospect:'#B8B5AE',talk:'#EF9F27',sent:'#378ADD',signed:'#1D9E75',progress:'#7F77DD',lost:'#D85A30'};
+const counts={};S.clients.forEach(c=>{counts[c.status]=(counts[c.status]||0)+1;});
+const labels=Object.keys(counts).map(k=>statMap[k]||k);
+const data=Object.values(counts);
+const bgs=Object.keys(counts).map(k=>colors[k]||'#888780');
+document.getElementById('donut-legend').innerHTML=labels.map((l,i)=>`<span style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:2px;background:${bgs[i]};display:inline-block"></span>${l} ${data[i]}</span>`).join('');
+cDonut=new Chart(cd,{type:'doughnut',data:{labels,datasets:[{data,backgroundColor:bgs,borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,cutout:'68%',plugins:{legend:{display:false}}}});
+}
+
+// PROG BLOCKS
+function renderProgBlocks(){
+const cats={
+'Semaine':S.agencyTasks.week,'Admin':S.agencyTasks.admin,
+'ID P1':S.agencyTasks.id1,'ID P2':S.agencyTasks.id2,'ID P3':S.agencyTasks.id3,
+'Comm':S.agencyTasks.comm
+};
+// Add client tasks
+S.clients.forEach(c=>{
+const ct=S.clientTasks[c.id]||[];
+if(ct.length)cats[c.name.split(' ')[0]]=ct;
+});
+document.getElementById('prog-blocks').innerHTML=Object.entries(cats).map(([label,tasks])=>{
+const done=tasks.filter(t=>t.done).length;const total=tasks.length;
+const pct=total?Math.round(done/total*100):0;
+return`<div style="padding:4px 0">
+<div style="display:flex;justify-content:space-between;margin-bottom:5px">
+<span style="font-size:12px;font-weight:500">${label}</span>
+<span style="font-size:12px;color:var(--text3)">${done}/${total}</span>
+</div>
+<div class="prog-wrap"><div class="prog-fill" style="width:${pct}%"></div></div>
+</div>`;
+}).join('');
+}
+
+// AGENCY TASKS
+let currentIdPhase=S.idPhase||1;
+function setIdPhase(n){
+currentIdPhase=n;S.idPhase=n;save();
+document.querySelectorAll('#page-agence .pill').forEach((b,i)=>{
+b.style.borderColor=i+1===n?'var(--accent)':'var(--border)';
+b.style.color=i+1===n?'var(--accent)':'var(--text3)';
+});
+renderIdPhase();
+}
+function renderIdPhase(){
+const key='id'+currentIdPhase;
+const container=document.getElementById('id-phase-container');
+if(!container)return;
+container.innerHTML=`<div id="tl-${key}"></div>
+<div class="add-row"><input class="add-input" id="in-${key}" placeholder="Nouvelle tâche..." onkeydown="if(event.key==='Enter')addTask('${key}',this)">
+<button class="add-btn" onclick="addTask('${key}',document.getElementById('in-${key}'))">+</button></div>`;
+renderTaskList('tl-'+key,key,'agency');
+}
+function renderAgence(){
+renderTaskList('tl-week','week','agency');
+renderTaskList('tl-admin','admin','agency');
+renderTaskList('tl-comm','comm','agency');
+setIdPhase(currentIdPhase);
+const all=[...S.agencyTasks.week,...S.agencyTasks.admin,...S.agencyTasks.id1,...S.agencyTasks.id2,...S.agencyTasks.id3,...S.agencyTasks.comm];
+const done=all.filter(t=>t.done).length;
+const el=document.getElementById('agence-summary');
+if(el)el.textContent=done+' / '+all.length+' complétées';
+}
+
+// GENERIC TASK RENDERER (agency)
+function renderTaskList(containerId,listKey,type){
+const el=document.getElementById(containerId);if(!el)return;
+const tasks=S.agencyTasks[listKey]||[];
+if(!tasks.length){el.innerHTML='<div style="font-size:13px;color:var(--text3);padding:6px 0">Aucune tâche.</div>';return;}
+el.innerHTML=tasks.map(t=>`
+<div class="task-row" onclick="toggleAgencyTask('${listKey}',${t.id})">
+<div class="cb ${t.done?'done':''}"></div>
+<span class="task-text ${t.done?'done':''}">${t.text}</span>
+<span onclick="event.stopPropagation();delAgencyTask('${listKey}',${t.id})" class="action-btn">×</span>
+</div>`).join('');
+}
+function toggleAgencyTask(k,id){const t=(S.agencyTasks[k]||[]).find(x=>x.id===id);if(t){t.done=!t.done;save();}renderTaskList('tl-'+k,k,'agency');renderProgBlocks();}
+function delAgencyTask(k,id){S.agencyTasks[k]=(S.agencyTasks[k]||[]).filter(x=>x.id!==id);save();renderTaskList('tl-'+k,k,'agency');renderProgBlocks();}
+function addTask(k,inp){if(!inp||!inp.value.trim())return;(S.agencyTasks[k]=S.agencyTasks[k]||[]).push({id:S.nid++,text:inp.value.trim(),done:false});inp.value='';save();renderTaskList('tl-'+k,k,'agency');renderProgBlocks();}
+
+// CLIENT TASKS
+function renderClientTasks(){
+const el=document.getElementById('client-tasks-list');
+const activeClients=S.clients.filter(c=>c.status!=='lost');
+if(!activeClients.length){el.innerHTML='<div class="card" style="text-align:center;padding:32px;color:var(--text3)">Aucun client actif.</div>';return;}
+
+let totalDone=0,totalAll=0;
+el.innerHTML=activeClients.map(c=>{
+const tasks=(S.clientTasks[c.id]||[]);
+const done=tasks.filter(t=>t.done).length;
+const pct=tasks.length?Math.round(done/tasks.length*100):0;
+totalDone+=done;totalAll+=tasks.length;
+const isOpen=S.clientTasksOpen[c.id];
+const statusMap={prospect:'p-prospect',talk:'p-talk',sent:'p-sent',signed:'p-signed',progress:'p-progress',lost:'p-lost'};
+const statusLabel={prospect:'Prospect',talk:'En discussion',sent:'Devis envoyé',signed:'Signé',progress:'En cours',lost:'Perdu'};
+const tasksByPhase={};
+tasks.forEach(t=>{(tasksByPhase[t.phase]=tasksByPhase[t.phase]||[]).push(t);});
+
+const taskHtml=Object.entries(tasksByPhase).map(([phase,pts])=>`
+<div style="margin-bottom:10px">
+<div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;display:flex;align-items:center;gap:6px">
+<span style="background:${PHASE_COLORS[phase]||'#F5F4F0'};color:${PHASE_TEXT[phase]||'#5F5E5A'};padding:2px 8px;border-radius:10px">${PHASE_LABELS[phase]||phase}</span>
+</div>
+${pts.map(t=>`
+<div class="task-row" onclick="toggleClientTask(${c.id},${t.id})" style="padding:7px 0">
+<div class="cb ${t.done?'done':''}"></div>
+<span class="task-text ${t.done?'done':''}">${t.text}</span>
+${t.deadline?`<span style="font-size:10px;color:var(--text3);white-space:nowrap">${t.deadline}</span>`:''}
+<span onclick="event.stopPropagation();delClientTask(${c.id},${t.id})" class="action-btn">×</span>
+</div>`).join('')}
+</div>`).join('');
+
+return`<div class="client-task-block">
+<div class="client-task-header" onclick="toggleClientBlock(${c.id})">
+<div class="client-task-header-left">
+<span class="caret ${isOpen?'open':''}">▶</span>
+<div>
+<div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:600">${c.name}</div>
+<div style="font-size:11px;color:var(--text3);margin-top:2px">${c.service||'—'} · ${tasks.length} tâche${tasks.length!==1?'s':''}</div>
+</div>
+</div>
+<div style="display:flex;align-items:center;gap:12px">
+<span class="pill ${statusMap[c.status]||'p-prospect'}">${statusLabel[c.status]||c.status}</span>
+<div style="text-align:right;min-width:80px">
+<div style="font-size:11px;color:var(--text3)">${done}/${tasks.length} · ${pct}%</div>
+<div class="prog-wrap" style="margin-top:4px;width:80px"><div class="prog-fill" style="width:${pct}%"></div></div>
+</div>
+</div>
+</div>
+${isOpen?`<div class="client-task-body">
+${tasks.length?taskHtml:'<div style="font-size:13px;color:var(--text3);padding:8px 0">Aucune tâche pour ce client.</div>'}
+<div class="add-row" style="margin-top:8px">
+<button class="btn-secondary" style="width:100%;font-size:12px" onclick="openCtaskModal(${c.id})">+ Ajouter une tâche</button>
+</div>
+</div>`:''}
+</div>`;
+}).join('');
+
+const sumEl=document.getElementById('client-tasks-summary');
+if(sumEl)sumEl.textContent=totalDone+' / '+totalAll+' tâches complétées · '+activeClients.length+' clients actifs';
+}
+
+function toggleClientBlock(clientId){
+S.clientTasksOpen[clientId]=!S.clientTasksOpen[clientId];
+save();renderClientTasks();
+}
+function toggleClientTask(clientId,taskId){
+const tasks=S.clientTasks[clientId]||[];
+const t=tasks.find(x=>x.id===taskId);if(t){t.done=!t.done;save();}
+renderClientTasks();renderProgBlocks();
+}
+function delClientTask(clientId,taskId){
+S.clientTasks[clientId]=(S.clientTasks[clientId]||[]).filter(x=>x.id!==taskId);
+save();renderClientTasks();renderProgBlocks();
+}
+
+// MODAL CLIENT TASK
+let ctaskClientId=null;
+function openCtaskModal(clientId){
+ctaskClientId=clientId;
+document.getElementById('ct-text').value='';
+document.getElementById('ct-phase').value='creation';
+document.getElementById('ct-deadline').value='';
+document.getElementById('modal-ctask-bg').classList.add('open');
+}
+function closeCtaskModal(){document.getElementById('modal-ctask-bg').classList.remove('open');ctaskClientId=null;}
+function saveCtask(){
+const text=document.getElementById('ct-text').value.trim();
+if(!text){alert('Veuillez saisir une tâche.');return;}
+if(!S.clientTasks[ctaskClientId])S.clientTasks[ctaskClientId]=[];
+S.clientTasks[ctaskClientId].push({
+id:S.nid++,text,done:false,
+phase:document.getElementById('ct-phase').value,
+deadline:document.getElementById('ct-deadline').value
+});
+save();closeCtaskModal();renderClientTasks();
+}
+
+// PIPELINE
+const statusMap2={prospect:{label:'Prospect',cls:'p-prospect'},talk:{label:'En discussion',cls:'p-talk'},sent:{label:'Devis envoyé',cls:'p-sent'},signed:{label:'Signé',cls:'p-signed'},progress:{label:'En cours',cls:'p-progress'},lost:{label:'Perdu',cls:'p-lost'}};
+const avatarBgs=['#EEEDFE','#E1F5EE','#FAECE7','#FAEEDA','#FBEAF0','#E6F1FB'];
+const priorityIcon={high:'▲',normal:'',low:'▼'};
+const priorityColor={high:'#D4563A',normal:'transparent',low:'#888780'};
+
+function filterPipe(status){S.pipeFilter=status;save();renderPipeline();}
+function renderPipeline(){
+const all=S.clients;
+const filtered=S.pipeFilter?all.filter(c=>c.status===S.pipeFilter):all;
+const total=all.reduce((s,c)=>s+(c.amount||0),0);
+const signed=all.filter(c=>c.status==='signed'||c.status==='progress').length;
+const conv=all.length?Math.round(signed/all.length*100):0;
+const active=all.filter(c=>c.status!=='lost').length;
+document.getElementById('pipe-kpis').innerHTML=`
+<div class="kpi"><div class="kpi-label">Valeur pipeline</div><div class="kpi-val" style="font-size:18px">${(total/1000).toFixed(0)}k FCFA</div></div>
+<div class="kpi"><div class="kpi-label">Prospects actifs</div><div class="kpi-val" style="color:var(--ok)">${active}</div></div>
+<div class="kpi"><div class="kpi-label">Signés / en cours</div><div class="kpi-val" style="color:var(--accent)">${signed}</div></div>
+<div class="kpi"><div class="kpi-label">Taux conversion</div><div class="kpi-val" style="color:var(--warn)">${conv}%</div></div>`;
+const list=document.getElementById('pipe-list');
+if(!filtered.length){list.innerHTML='<div style="padding:20px;text-align:center;font-size:13px;color:var(--text3)">Aucun client dans cette catégorie.</div>';return;}
+list.innerHTML=filtered.map(c=>{
+const st=statusMap2[c.status]||statusMap2.prospect;
+const initials=c.name.split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase();
+const bg=avatarBgs[c.id%avatarBgs.length];
+const tasks=S.clientTasks[c.id]||[];
+const tdone=tasks.filter(t=>t.done).length;
+const tpct=tasks.length?Math.round(tdone/tasks.length*100):0;
+return`<div class="client-row">
+<div class="avatar" style="background:${bg}">${initials}</div>
+<div class="client-info">
+<div class="client-name">${c.name} ${priorityIcon[c.priority]?`<span style="color:${priorityColor[c.priority]};font-size:10px">${priorityIcon[c.priority]}</span>`:''}</div>
+<div class="client-meta">${c.sector||''}${c.city?' · '+c.city:''}${c.channel?' · '+c.channel:''}</div>
+${tasks.length?`<div style="display:flex;align-items:center;gap:6px;margin-top:4px"><div class="prog-wrap" style="width:60px"><div class="prog-fill" style="width:${tpct}%"></div></div><span style="font-size:10px;color:var(--text3)">${tdone}/${tasks.length} tâches</span></div>`:''}
+</div>
+<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:130px">
+<span class="pill ${st.cls}">${st.label}</span>
+<span style="font-size:11px;color:var(--text3)">${c.amount?(c.amount/1000).toFixed(0)+'k FCFA':''}</span>
+</div>
+<button class="action-btn" onclick="openDetail(${c.id})" style="font-size:20px;opacity:.5">⋯</button>
+<button class="action-btn" onclick="editById(${c.id})" title="Modifier">✎</button>
+<button class="action-btn" onclick="delClient(${c.id})" title="Supprimer">×</button>
+</div>`;
+}).join('');
+}
+
+function openDetail(id){
+const c=S.clients.find(x=>x.id===id);if(!c)return;
+S.openClientId=id;
+document.getElementById('detail-name').textContent=c.name;
+document.getElementById('detail-body').innerHTML=`
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:0">
+${row('Contact',c.contact||'—')}${row('Téléphone',c.phone||'—')}
+${row('Email',c.email||'—')}${row('Secteur',c.sector||'—')}
+${row('Ville',c.city||'—')}${row('Canal',c.channel||'—')}
+${row('Service',c.service||'—')}${row('Montant',c.amount?(c.amount.toLocaleString('fr-FR')+' FCFA'):'—')}
+${row('1er contact',c.date||'—')}${row('Priorité',c.priority==='high'?'Haute':c.priority==='low'?'Faible':'Normale')}
+<div class="detail-row" style="grid-column:1/-1">${dlab('Besoins / notes')}<span>${c.notes||'—'}</span></div>
+<div class="detail-row" style="grid-column:1/-1">${dlab('Prochaine action')}<span style="color:var(--accent);font-weight:500">${c.next||'—'}</span></div>
+</div>`;
+document.getElementById('detail-panel').classList.add('open');
+document.getElementById('detail-panel').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function row(label,val){return`<div class="detail-row">${dlab(label)}<span>${val}</span></div>`;}
+function dlab(l){return`<span class="detail-label">${l}</span>`;}
+function closeDetail(){document.getElementById('detail-panel').classList.remove('open');S.openClientId=null;}
+
+let editId=null;
+function openModal(id=null){
+editId=id;
+const c=id?S.clients.find(x=>x.id===id):null;
+document.getElementById('modal-title').textContent=c?'Modifier le client':'Nouveau client';
+['name','contact','phone','email','sector','city','channel','status','service','amount','date','priority','notes','next'].forEach(f=>{const el=document.getElementById('f-'+f);if(el)el.value=c?c[f]||'':'';});
+if(!c)document.getElementById('f-date').value=new Date().toISOString().slice(0,10);
+document.getElementById('modal-bg').classList.add('open');
+}
+function closeModal(){document.getElementById('modal-bg').classList.remove('open');editId=null;}
+function editById(id){openModal(id);}
+function editClient(){if(S.openClientId)openModal(S.openClientId);}
+function saveClient(){
+const name=document.getElementById('f-name').value.trim();
+if(!name){alert('Le nom de l\'entreprise est obligatoire.');return;}
+const fields=['name','contact','phone','email','sector','city','channel','status','service','priority','notes','next'];
+const obj={};
+fields.forEach(f=>{obj[f]=document.getElementById('f-'+f).value;});
+obj.amount=parseInt(document.getElementById('f-amount').value)||0;
+obj.date=document.getElementById('f-date').value;
+if(editId){
+const idx=S.clients.findIndex(x=>x.id===editId);
+if(idx>-1){S.clients[idx]={...S.clients[idx],...obj};}
+}else{
+obj.id=S.nid++;
+if(!S.clientTasks[obj.id])S.clientTasks[obj.id]=[];
+S.clients.push(obj);
+}
+save();closeModal();renderPipeline();
+if(S.openClientId===editId&&editId)openDetail(editId);
+}
+function delClient(id){if(!confirm('Supprimer ce client ?'))return;S.clients=S.clients.filter(c=>c.id!==id);delete S.clientTasks[id];save();closeDetail();renderPipeline();}
+
+// NOTES
+function renderNotes(){
+const el=document.getElementById('notes-list');
+if(!S.notes.length){el.innerHTML='<div class="card" style="text-align:center;padding:32px;color:var(--text3)">Aucune note.</div>';return;}
+el.innerHTML=S.notes.map(n=>`
+<div class="note-card">
+<div class="note-header">
+<div class="note-title">${n.title}</div>
+<div style="display:flex;align-items:center;gap:10px">
+<span style="font-size:11px;color:var(--text3)">${n.date}</span>
+<button class="action-btn" onclick="delNote(${n.id})">×</button>
+</div>
+</div>
+<textarea class="notes-area" onchange="updNote(${n.id},this.value)">${n.content}</textarea>
+</div>`).join('');
+}
+function addNote(){const t=prompt('Titre :');if(!t)return;S.notes.unshift({id:S.nid++,date:new Date().toISOString().slice(0,10),title:t,content:''});save();renderNotes();}
+function updNote(id,v){const n=S.notes.find(x=>x.id===id);if(n){n.content=v;save();}}
+function delNote(id){if(!confirm('Supprimer ?'))return;S.notes=S.notes.filter(n=>n.id!==id);save();renderNotes();}
+
+// ACCUEIL
+function renderAccueil(){renderKPIs();renderProgBlocks();setTimeout(initCharts,60);}
+renderAccueil();
+</script>
+</body>
+</html>
+
