@@ -21,4 +21,7 @@ create policy "genzy_select" on dashboard_state for select using (true);
 create policy "genzy_update" on dashboard_state for update using (true);
 create policy "genzy_insert" on dashboard_state for insert with check (true);
 
+alter table dashboard_state replica identity full;
+
+-- Si erreur "already member of publication", ignorer la ligne suivante :
 alter publication supabase_realtime add table dashboard_state;

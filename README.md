@@ -31,7 +31,9 @@ Dans **SQL Editor**, exécute le contenu de [`supabase/schema.sql`](supabase/sch
 
 ### 3. Activer le temps réel
 
-Dans **Database → Replication**, vérifie que `dashboard_state` est activé pour Realtime.
+Dans **SQL Editor**, exécute aussi [`supabase/fix-realtime.sql`](supabase/fix-realtime.sql).
+
+Puis dans **Database → Replication**, vérifie que `dashboard_state` est activé pour Realtime.
 
 ### 4. Configurer GitHub (pour le site en ligne)
 
