@@ -14,7 +14,7 @@
 --ok:#1D9E75;--warn:#BA7517;--info:#185FA5;--danger:#993C1D;
 --sw:240px;--r:10px;
 }
-body{font-family:'DM Sans',sans-serif;background:var(--light);color:var(--text);min-height:100vh;display:flex}
+body{font-family:'DM Sans',sans-serif;background:var(--light);color:var(--text);min-height:100vh;display:flex;overflow:hidden}
 .sidebar{width:var(--sw);min-height:100vh;background:var(--black);display:flex;flex-direction:column;padding:24px 0;position:fixed;top:0;left:0;z-index:100}
 .logo-area{padding:0 20px 24px;border-bottom:1px solid rgba(255,255,255,0.07);display:flex;align-items:center;gap:10px}
 .logo-mark{width:38px;height:38px;background:var(--white);border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
@@ -37,7 +37,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--light);color:var(--text);
 .app-loading{position:fixed;inset:0;background:var(--light);z-index:999;display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--text3)}
 .app-loading.hidden{display:none}
 .acc-bar{height:3px;background:var(--accent);border-radius:2px;margin-bottom:4px;width:28px}
-.main{margin-left:var(--sw);flex:1;padding:32px 36px;min-height:100vh}
+.main{margin-left:var(--sw);flex:1;padding:32px 36px;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:48px}
 .page{display:none}.page.active{display:block}
 .page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:12px}
 .page-title{font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;letter-spacing:-0.5px}
@@ -106,11 +106,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--light);color:var(--text);
 .detail-label{color:var(--text3);min-width:130px;flex-shrink:0}
 
 /* CLIENT TASKS SECTION */
-.client-task-block{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);margin-bottom:12px;overflow:hidden}
-.client-task-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;cursor:pointer;border-bottom:1px solid var(--light)}
+.client-task-block{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);margin-bottom:12px}
+.client-task-header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px;cursor:pointer;border-bottom:1px solid var(--light);flex-wrap:wrap}
 .client-task-header:hover{background:var(--surface2)}
-.client-task-header-left{display:flex;align-items:center;gap:10px}
-.client-task-body{padding:12px 18px 6px}
+.client-task-header-left{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
+.client-task-header-meta{display:flex;align-items:center;gap:12px;flex-shrink:0}
+.client-task-body{padding:12px 18px 14px}
+.client-tasks-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
 .caret{font-size:10px;color:var(--text3);transition:transform .2s}
 .caret.open{transform:rotate(90deg)}
 .task-phase-badge{font-size:10px;padding:2px 8px;border-radius:10px;font-weight:500}
@@ -124,7 +126,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--light);color:var(--text);
 @media(max-width:860px){
 .sidebar{width:60px}
 .logo-name,.logo-sub,.nav-item span,.sidebar-footer{display:none}
-.main{margin-left:60px;padding:20px 14px}
+.main{margin-left:60px;padding:20px 14px 60px}
+.client-task-header-meta{width:100%;justify-content:space-between}
 .two-col{grid-template-columns:1fr}
 .form-grid{grid-template-columns:1fr}
 }
@@ -257,6 +260,10 @@ Identité visuelle Genzy
 <button class="btn-icon" onclick="exportData()">↑ Export</button>
 <button class="btn-icon" onclick="importData()">↓ Import</button>
 </div>
+</div>
+<div class="client-tasks-actions">
+<button class="btn-secondary" style="font-size:12px;padding:7px 12px" onclick="expandAllClients(true)">Tout déplier</button>
+<button class="btn-secondary" style="font-size:12px;padding:7px 12px" onclick="expandAllClients(false)">Tout replier</button>
 </div>
 <div id="client-tasks-list"></div>
 </div>
@@ -484,6 +491,35 @@ nid:300,pipeFilter:'',openClientId:null,idPhase:1,openCtaskClientId:null,clientT
 
 let S;
 
+function normalizeState(state){
+if(!state)return state;
+if(!state.clientTasks)state.clientTasks={};
+if(!state.clientTasksOpen)state.clientTasksOpen={};
+if(!state.agencyTasks)state.agencyTasks=defAgencyTasks();
+(state.clients||[]).forEach(c=>{
+const tasks=state.clientTasks[c.id]||state.clientTasks[String(c.id)];
+state.clientTasks[c.id]=Array.isArray(tasks)?tasks:[];
+});
+return state;
+}
+
+function getClientTasks(clientId){
+const ct=S.clientTasks||{};
+return ct[clientId]||ct[String(clientId)]||[];
+}
+
+function isClientBlockOpen(clientId){
+const open=S.clientTasksOpen||{};
+if(open[clientId]===undefined&&open[String(clientId)]===undefined)return true;
+return!!(open[clientId]||open[String(clientId)]);
+}
+
+function expandAllClients(open){
+if(!S.clientTasksOpen)S.clientTasksOpen={};
+S.clients.filter(c=>c.status!=='lost').forEach(c=>{S.clientTasksOpen[c.id]=open;});
+save();renderClientTasks();
+}
+
 function save(){
 GenzySync.save(()=>S);
 }
@@ -591,7 +627,7 @@ const cats={
 };
 // Add client tasks
 S.clients.forEach(c=>{
-const ct=S.clientTasks[c.id]||[];
+const ct=getClientTasks(c.id);
 if(ct.length)cats[c.name.split(' ')[0]]=ct;
 });
 document.getElementById('prog-blocks').innerHTML=Object.entries(cats).map(([label,tasks])=>{
@@ -661,11 +697,11 @@ if(!activeClients.length){el.innerHTML='<div class="card" style="text-align:cent
 
 let totalDone=0,totalAll=0;
 el.innerHTML=activeClients.map(c=>{
-const tasks=(S.clientTasks[c.id]||[]);
+const tasks=getClientTasks(c.id);
 const done=tasks.filter(t=>t.done).length;
 const pct=tasks.length?Math.round(done/tasks.length*100):0;
 totalDone+=done;totalAll+=tasks.length;
-const isOpen=S.clientTasksOpen[c.id];
+const isOpen=isClientBlockOpen(c.id);
 const statusMap={prospect:'p-prospect',talk:'p-talk',sent:'p-sent',signed:'p-signed',progress:'p-progress',lost:'p-lost'};
 const statusLabel={prospect:'Prospect',talk:'En discussion',sent:'Devis envoyé',signed:'Signé',progress:'En cours',lost:'Perdu'};
 const tasksByPhase={};
@@ -689,12 +725,12 @@ return`<div class="client-task-block">
 <div class="client-task-header" onclick="toggleClientBlock(${c.id})">
 <div class="client-task-header-left">
 <span class="caret ${isOpen?'open':''}">▶</span>
-<div>
-<div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:600">${c.name}</div>
+<div style="min-width:0">
+<div style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:600;word-break:break-word">${c.name}</div>
 <div style="font-size:11px;color:var(--text3);margin-top:2px">${c.service||'—'} · ${tasks.length} tâche${tasks.length!==1?'s':''}</div>
 </div>
 </div>
-<div style="display:flex;align-items:center;gap:12px">
+<div class="client-task-header-meta">
 <span class="pill ${statusMap[c.status]||'p-prospect'}">${statusLabel[c.status]||c.status}</span>
 <div style="text-align:right;min-width:80px">
 <div style="font-size:11px;color:var(--text3)">${done}/${tasks.length} · ${pct}%</div>
@@ -720,12 +756,13 @@ S.clientTasksOpen[clientId]=!S.clientTasksOpen[clientId];
 save();renderClientTasks();
 }
 function toggleClientTask(clientId,taskId){
-const tasks=S.clientTasks[clientId]||[];
+const tasks=getClientTasks(clientId);
 const t=tasks.find(x=>x.id===taskId);if(t){t.done=!t.done;save();}
 renderClientTasks();renderProgBlocks();
 }
 function delClientTask(clientId,taskId){
-S.clientTasks[clientId]=(S.clientTasks[clientId]||[]).filter(x=>x.id!==taskId);
+if(!S.clientTasks[clientId])S.clientTasks[clientId]=[];
+S.clientTasks[clientId]=getClientTasks(clientId).filter(x=>x.id!==taskId);
 save();renderClientTasks();renderProgBlocks();
 }
 
@@ -776,7 +813,7 @@ list.innerHTML=filtered.map(c=>{
 const st=statusMap2[c.status]||statusMap2.prospect;
 const initials=c.name.split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase();
 const bg=avatarBgs[c.id%avatarBgs.length];
-const tasks=S.clientTasks[c.id]||[];
+const tasks=getClientTasks(c.id);
 const tdone=tasks.filter(t=>t.done).length;
 const tpct=tasks.length?Math.round(tdone/tasks.length*100):0;
 return`<div class="client-row">
@@ -875,11 +912,11 @@ function delNote(id){if(!confirm('Supprimer ?'))return;S.notes=S.notes.filter(n=
 function renderAccueil(){renderKPIs();renderProgBlocks();setTimeout(initCharts,60);}
 
 GenzySync.onStatusChange(updateSyncUI);
-GenzySync.onRemoteUpdate(()=>refreshUI());
+GenzySync.onRemoteUpdate(()=>{S=normalizeState(S);refreshUI();});
 
 async function boot(){
 try{
-await GenzySync.init(def,(state)=>{S=state;});
+await GenzySync.init(def,(state)=>{S=normalizeState(state);});
 }catch(err){
 console.error('Boot error:',err);
 S=def();
