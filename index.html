@@ -27,6 +27,15 @@ body{font-family:'DM Sans',sans-serif;background:var(--light);color:var(--text);
 .nav-dot{width:6px;height:6px;border-radius:50%;background:transparent;flex-shrink:0;transition:background .15s}
 .nav-item.active .nav-dot{background:var(--accent)}
 .sidebar-footer{padding:16px 20px;border-top:1px solid rgba(255,255,255,0.07);font-size:11px;color:#444441}
+.sync-status{font-size:10px;margin-bottom:6px;display:flex;align-items:center;gap:5px;color:#888780}
+.sync-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.sync-dot.loading,.sync-dot.saving{background:#EF9F27;animation:syncPulse 1s infinite}
+.sync-dot.synced{background:#1D9E75}
+.sync-dot.error{background:#D85A30}
+.sync-dot.offline{background:#5F5E5A}
+@keyframes syncPulse{0%,100%{opacity:1}50%{opacity:.35}}
+.app-loading{position:fixed;inset:0;background:var(--light);z-index:999;display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--text3)}
+.app-loading.hidden{display:none}
 .acc-bar{height:3px;background:var(--accent);border-radius:2px;margin-bottom:4px;width:28px}
 .main{margin-left:var(--sw);flex:1;padding:32px 36px;min-height:100vh}
 .page{display:none}.page.active{display:block}
@@ -122,6 +131,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--light);color:var(--text);
 </style>
 </head>
 <body>
+<div id="app-loading" class="app-loading">Chargement du tableau de bord…</div>
 <aside class="sidebar">
 <div class="logo-area">
 <div class="logo-mark">
@@ -141,7 +151,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--light);color:var(--text);
 <button class="nav-item" onclick="nav('pipeline',this)"><div class="nav-dot"></div><span>Pipeline clients</span></button>
 <button class="nav-item" onclick="nav('notes',this)"><div class="nav-dot"></div><span>Notes & réunions</span></button>
 </nav>
-<div class="sidebar-footer"><div class="acc-bar"></div>Bénin · Genzy 2025</div>
+<div class="sidebar-footer">
+<div id="sync-status" class="sync-status"><span class="sync-dot loading"></span><span>Connexion…</span></div>
+<div class="acc-bar"></div>Bénin · Genzy 2025</div>
 </aside>
 
 <main class="main">
@@ -375,6 +387,9 @@ Identité visuelle Genzy
 
 <input type="file" id="import-file" accept=".json" style="display:none" onchange="doImport(this)">
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="js/sync.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
 const KEY='genzy_v4';
@@ -468,8 +483,25 @@ nid:300,pipeFilter:'',openClientId:null,idPhase:1,openCtaskClientId:null,clientT
 }
 
 let S;
-try{S=JSON.parse(localStorage.getItem(KEY));if(!S||!S.agencyTasks)S=def();}catch(e){S=def();}
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+
+function save(){
+GenzySync.save(()=>S);
+}
+
+function refreshUI(){
+const active=document.querySelector('.nav-item.active');
+const page=active?.getAttribute('onclick')?.match(/nav\('(\w+)'/)?.[1]||'accueil';
+document.getElementById('month-sel').value=S.month;
+currentIdPhase=S.idPhase||1;
+renderPage(page);
+}
+
+function updateSyncUI(status,detail){
+const el=document.getElementById('sync-status');
+if(!el)return;
+const labels={loading:'Connexion…',saving:'Enregistrement…',synced:'Synchronisé',error:'Erreur de sync',offline:'Mode local'};
+el.innerHTML=`<span class="sync-dot ${status}"></span><span>${detail||labels[status]||status}</span>`;
+}
 
 // EXPORT / IMPORT
 function exportData(){
@@ -488,7 +520,7 @@ try{
 const d=JSON.parse(e.target.result);
 if(!d.clients||!d.agencyTasks){alert('Fichier invalide.');return;}
 S=d;save();
-renderPage(document.querySelector('.nav-item.active')?.onclick?.toString().match(/'(\w+)'/)?.[1]||'accueil');
+refreshUI();
 alert('✓ Données importées avec succès.');
 }catch(err){alert('Erreur lors de l\'import.');}
 };
@@ -512,10 +544,7 @@ if(n==='pipeline')renderPipeline();
 if(n==='notes')renderNotes();
 }
 
-// DATE
-const now=new Date();
-document.getElementById('date-lbl').textContent=DAYS[now.getDay()]+' '+now.getDate()+' '+MONTHS[now.getMonth()]+' '+now.getFullYear();
-document.getElementById('month-sel').value=S.month;
+// DATE — initialisé au boot
 
 // KPIs
 const KPI_DATA=[
@@ -844,7 +873,20 @@ function delNote(id){if(!confirm('Supprimer ?'))return;S.notes=S.notes.filter(n=
 
 // ACCUEIL
 function renderAccueil(){renderKPIs();renderProgBlocks();setTimeout(initCharts,60);}
+
+GenzySync.onStatusChange(updateSyncUI);
+GenzySync.onRemoteUpdate(()=>refreshUI());
+
+async function boot(){
+await GenzySync.init(def,(state)=>{S=state;});
+document.getElementById('app-loading').classList.add('hidden');
+const now=new Date();
+document.getElementById('date-lbl').textContent=DAYS[now.getDay()]+' '+now.getDate()+' '+MONTHS[now.getMonth()]+' '+now.getFullYear();
+document.getElementById('month-sel').value=S.month;
+currentIdPhase=S.idPhase||1;
 renderAccueil();
+}
+boot();
 </script>
 </body>
 </html>

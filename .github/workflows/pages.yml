@@ -29,6 +29,20 @@ jobs:
         with:
           enablement: true
 
+      - name: Create runtime config
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          if [ -n "$SUPABASE_URL" ] && [ -n "$SUPABASE_ANON_KEY" ]; then
+            cat > config.js <<EOF
+          window.GENZY_CONFIG = {
+            supabaseUrl: '${SUPABASE_URL}',
+            supabaseAnonKey: '${SUPABASE_ANON_KEY}'
+          };
+          EOF
+          fi
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
