@@ -608,7 +608,7 @@ return`<div style="padding:4px 0">
 }
 
 // AGENCY TASKS
-let currentIdPhase=S.idPhase||1;
+let currentIdPhase=1;
 function setIdPhase(n){
 currentIdPhase=n;S.idPhase=n;save();
 document.querySelectorAll('#page-agence .pill').forEach((b,i)=>{
@@ -878,13 +878,20 @@ GenzySync.onStatusChange(updateSyncUI);
 GenzySync.onRemoteUpdate(()=>refreshUI());
 
 async function boot(){
+try{
 await GenzySync.init(def,(state)=>{S=state;});
+}catch(err){
+console.error('Boot error:',err);
+S=def();
+updateSyncUI('error','Chargement en mode local');
+}finally{
 document.getElementById('app-loading').classList.add('hidden');
 const now=new Date();
 document.getElementById('date-lbl').textContent=DAYS[now.getDay()]+' '+now.getDate()+' '+MONTHS[now.getMonth()]+' '+now.getFullYear();
 document.getElementById('month-sel').value=S.month;
 currentIdPhase=S.idPhase||1;
 renderAccueil();
+}
 }
 boot();
 </script>

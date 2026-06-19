@@ -158,26 +158,36 @@ const GenzySync = (() => {
     }
 
     setStatus('loading', 'Connexion à la base…');
-    initClient();
 
-    let state = await loadFromRemote();
+    try {
+      initClient();
+      let state = await loadFromRemote();
 
-    if (!state) {
-      const local = loadFromLocal();
-      state = local || getDefaultState();
-      await pushState(state);
+      if (!state) {
+        const local = loadFromLocal();
+        state = local || getDefaultState();
+        try {
+          await pushState(state);
+        } catch (pushErr) {
+          console.warn('Initial push failed, continuing with local state:', pushErr);
+        }
+      }
+
+      applyState(state);
+      saveToLocal(state);
+      subscribeRealtime(
+        () => window.S,
+        (remote) => { window.S = remote; }
+      );
+      setStatus('synced', 'Connecté');
+      return { mode: 'remote' };
+    } catch (err) {
+      console.error('Genzy init error:', err);
+      const fallback = loadFromLocal() || getDefaultState();
+      applyState(fallback);
+      setStatus('error', 'Connexion échouée — mode local');
+      return { mode: 'fallback' };
     }
-
-    applyState(state);
-    saveToLocal(state);
-
-    subscribeRealtime(
-      () => window.S,
-      (remote) => { window.S = remote; }
-    );
-
-    setStatus('synced', 'Connecté');
-    return { mode: 'remote' };
   }
 
   function save(getState) {

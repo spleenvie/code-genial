@@ -8,7 +8,7 @@ create table if not exists dashboard_state (
 );
 
 insert into dashboard_state (id, data)
-values ('main', '{}'::jsonb)
+values ('main', '{"clients":[],"agencyTasks":{}}'::jsonb)
 on conflict (id) do nothing;
 
 alter table dashboard_state enable row level security;
